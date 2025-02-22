@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+from itertools import zip_longest
 
 """
 Go to https://developer.spotify.com/dashboard/applications and 
@@ -45,6 +46,12 @@ def get_top_tracks(artist_name, country="US"):
     # Return top 10 track URIs to add to the playlist
     return [track["uri"] for track in top_tracks["tracks"][:10]]  # Only top 10
 
+def interleave_tracks(track_lists):
+    """Interleave tracks from multiple artist lists."""
+    interleaved = []
+    for tracks in zip_longest(*track_lists):  # zip_longest fills missing spots with None
+        interleaved.extend(filter(None, tracks))  # Remove None values
+    return interleaved
 
 def create_playlist(artists, playlist_name="My Playlist", country="US"):
     user_id = sp.me()["id"]  # Get user ID
@@ -55,8 +62,12 @@ def create_playlist(artists, playlist_name="My Playlist", country="US"):
 
     # Collect top tracks for all artists
     track_uris = []
-    for artist in artists:
-        track_uris.extend(get_top_tracks(artist))
+
+    # Get top tracks for all artists
+    track_lists = [get_top_tracks(artist) for artist in artists]
+
+    # Interleave the tracks
+    track_uris = interleave_tracks(track_lists)
 
     # Add tracks to the playlist
     if track_uris:  # If tracks found
